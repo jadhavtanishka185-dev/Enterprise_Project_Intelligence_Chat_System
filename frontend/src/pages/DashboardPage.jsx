@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   useEffect(() => {
     loadProjects()
@@ -49,7 +50,11 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-950">
-      <Sidebar projects={projects} />
+      <Sidebar 
+        projects={projects} 
+        collapsed={sidebarCollapsed} 
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+      />
 
       <main className="flex-1 overflow-auto">
         {/* Header */}
@@ -59,10 +64,13 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold text-white">Dashboard</h1>
               <p className="text-sm text-gray-500">Welcome back, {user?.name}</p>
             </div>
-            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Project
-            </button>
+            {/* Only show New Project button for admin users */}
+            {user?.role === 'admin' && (
+              <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                New Project
+              </button>
+            )}
           </div>
         </div>
 
@@ -117,9 +125,14 @@ export default function DashboardPage() {
                 {search ? 'No projects match your search' : 'No projects yet'}
               </h3>
               <p className="text-gray-500 text-sm mb-6">
-                {search ? 'Try a different search term' : 'Create your first project to start building a knowledge base'}
+                {search 
+                  ? 'Try a different search term' 
+                  : user?.role === 'admin' 
+                    ? 'Create your first project to start building a knowledge base'
+                    : 'No projects available. Contact your administrator to create projects.'
+                }
               </p>
-              {!search && (
+              {!search && user?.role === 'admin' && (
                 <button onClick={() => setShowModal(true)} className="btn-primary">
                   Create First Project
                 </button>
@@ -135,7 +148,7 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {showModal && (
+      {showModal && user?.role === 'admin' && (
         <CreateProjectModal onClose={() => setShowModal(false)} onCreate={handleCreate} />
       )}
     </div>
