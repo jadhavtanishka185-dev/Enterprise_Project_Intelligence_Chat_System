@@ -6,6 +6,19 @@ export const authService = {
     return data
   },
 
+  // Admin login endpoint
+  adminLogin: async (email, password) => {
+    const { data } = await api.post('/auth/admin/login', { email, password })
+    return data
+  },
+
+  // User login endpoint
+  userLogin: async (email, password) => {
+    const { data } = await api.post('/auth/user/login', { email, password })
+    return data
+  },
+
+  // Legacy login (kept for backward compatibility)
   login: async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password })
     return data

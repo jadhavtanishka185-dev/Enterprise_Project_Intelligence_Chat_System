@@ -12,15 +12,20 @@ import {
   User,
 } from 'lucide-react'
 
-export default function Sidebar({ projects = [] }) {
+export default function Sidebar({ projects = [], collapsed = false, onToggle }) {
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [collapsed, setCollapsed] = useState(false)
 
   const handleLogout = () => {
+    const userRole = user?.role
     logout()
-    navigate('/login')
+    // Redirect to appropriate login page based on role
+    if (userRole === 'admin') {
+      navigate('/admin/login')
+    } else {
+      navigate('/user/login')
+    }
   }
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/')
@@ -43,8 +48,9 @@ export default function Sidebar({ projects = [] }) {
           </div>
         )}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={onToggle}
           className="ml-auto text-gray-500 hover:text-gray-300 transition-colors"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
@@ -80,14 +86,30 @@ export default function Sidebar({ projects = [] }) {
 
       {/* User */}
       <div className="border-t border-gray-800 p-3">
-        <div className={`flex items-center gap-3 px-2 py-2 rounded-lg ${collapsed ? 'justify-center' : ''}`}>
-          <div className="flex-shrink-0 w-8 h-8 bg-primary-700 rounded-full flex items-center justify-center">
+        <div 
+          className={`flex items-center gap-3 px-2 py-2 rounded-lg ${collapsed ? 'justify-center' : ''} group relative`}
+          title={collapsed ? user?.email : undefined}
+        >
+          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+            user?.role === 'admin' ? 'bg-red-700' : 'bg-primary-700'
+          }`}>
             <User className="h-4 w-4 text-white" />
           </div>
           {!collapsed && (
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden relative">
               <p className="text-sm font-medium text-gray-200 truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 truncate capitalize">{user?.role}</p>
+              <p className={`text-xs truncate capitalize font-medium ${
+                user?.role === 'admin' ? 'text-red-400' : 'text-primary-400'
+              }`}>
+                {user?.role || 'user'}
+              </p>
+              {/* Email tooltip on hover */}
+              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-50">
+                <div className="bg-gray-800 text-gray-200 text-xs px-3 py-2 rounded-lg shadow-lg border border-gray-700 whitespace-nowrap">
+                  {user?.email}
+                  <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                </div>
+              </div>
             </div>
           )}
           {!collapsed && (

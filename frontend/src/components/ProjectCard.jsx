@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { FolderOpen, FileText, MessageSquare, Trash2, ChevronRight, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function ProjectCard({ project, onDelete }) {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async (e) => {
@@ -39,13 +41,16 @@ export default function ProjectCard({ project, onDelete }) {
             </div>
           </div>
         </div>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all p-1 rounded"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        {/* Only show delete button for admin users */}
+        {user?.role === 'admin' && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all p-1 rounded"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Description */}

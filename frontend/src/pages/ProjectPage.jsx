@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { projectService } from '../services/projects'
 import { documentService } from '../services/documents'
 import Sidebar from '../components/Sidebar'
@@ -16,10 +17,12 @@ import toast from 'react-hot-toast'
 export default function ProjectPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [project, setProject] = useState(null)
   const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('documents')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -50,7 +53,11 @@ export default function ProjectPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-950">
-      <Sidebar projects={project ? [project] : []} />
+      <Sidebar 
+        projects={project ? [project] : []} 
+        collapsed={sidebarCollapsed} 
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+      />
 
       <main className="flex-1 overflow-auto">
         {/* Header */}
@@ -115,10 +122,13 @@ export default function ProjectPage() {
               <FileText className="h-4 w-4" />
               Documents ({documents.length})
             </TabButton>
-            <TabButton active={activeTab === 'upload'} onClick={() => setActiveTab('upload')}>
-              <Upload className="h-4 w-4" />
-              Upload
-            </TabButton>
+            {/* Only show Upload tab for admin users */}
+            {user?.role === 'admin' && (
+              <TabButton active={activeTab === 'upload'} onClick={() => setActiveTab('upload')}>
+                <Upload className="h-4 w-4" />
+                Upload
+              </TabButton>
+            )}
           </div>
 
           {/* Tab content */}
@@ -132,7 +142,7 @@ export default function ProjectPage() {
             </div>
           )}
 
-          {activeTab === 'upload' && (
+          {activeTab === 'upload' && user?.role === 'admin' && (
             <div className="card max-w-xl">
               <h2 className="text-base font-semibold text-gray-200 mb-4 flex items-center gap-2">
                 <Upload className="h-4 w-4 text-primary-400" />
