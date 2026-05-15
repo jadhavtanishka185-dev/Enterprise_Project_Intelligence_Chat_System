@@ -7,8 +7,8 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.document import Document
 from app.models.chat import Chat
-from app.schemas.project import ProjectCreate, ProjectResponse
-from app.utils.auth import get_current_user
+from app.schemas.project import ProjectResponse, ProjectCreate
+from app.utils.auth import get_current_user, get_admin_user
 from app.rag.vector_store import delete_project_collection
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -19,9 +19,21 @@ async def list_projects(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Project).where(Project.created_by == current_user.id).order_by(Project.created_at.desc())
-    )
+    """
+    List all projects - accessible by both admin and users
+    Admin sees all projects, users see only their own
+    """
+    if current_user.role.value == "admin":
+        # Admin sees all projects
+        result = await db.execute(
+            select(Project).order_by(Project.created_at.desc())
+        )
+    else:
+        # Regular users see only their projects
+        result = await db.execute(
+            select(Project).where(Project.created_by == current_user.id).order_by(Project.created_at.desc())
+        )
+    
     projects = result.scalars().all()
 
     response = []
@@ -47,9 +59,12 @@ async def list_projects(
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
     project_data: ProjectCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),  # Only admin can create
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Create a new project - ADMIN ONLY
+    """
     project = Project(
         name=project_data.name,
         description=project_data.description,
@@ -75,9 +90,20 @@ async def get_project(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.created_by == current_user.id)
-    )
+    """
+    Get a specific project - accessible by both admin and users
+    """
+    if current_user.role.value == "admin":
+        # Admin can access any project
+        result = await db.execute(
+            select(Project).where(Project.id == project_id)
+        )
+    else:
+        # Regular users can only access their own projects
+        result = await db.execute(
+            select(Project).where(Project.id == project_id, Project.created_by == current_user.id)
+        )
+    
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -102,11 +128,14 @@ async def get_project(
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),  # Only admin can delete
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Delete a project - ADMIN ONLY
+    """
     result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.created_by == current_user.id)
+        select(Project).where(Project.id == project_id)
     )
     project = result.scalar_one_or_none()
     if not project:

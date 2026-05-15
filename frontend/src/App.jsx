@@ -14,7 +14,7 @@ function PrivateRoute({ children }) {
   if (loading) return <LoadingSpinner fullScreen />
   return user ? children : <Navigate to="/user/login" replace />
 }
-
+//done
 function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <LoadingSpinner fullScreen />
@@ -28,8 +28,7 @@ export default function App() {
       <Route path="/admin/login" element={<PublicRoute><AdminLoginPage /></PublicRoute>} />
       <Route path="/user/login" element={<PublicRoute><UserLoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-      {/* <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} /> */}
-       <Route path="/dashboard" element={<DashboardPage />} />
+       <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} /> 
       <Route path="/projects/:id" element={<PrivateRoute><ProjectPage /></PrivateRoute>} />
       <Route path="/projects/:id/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/user/login" replace />} />

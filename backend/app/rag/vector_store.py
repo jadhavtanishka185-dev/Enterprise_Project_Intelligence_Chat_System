@@ -1,37 +1,223 @@
+# import os
+# import chromadb
+# from langchain_chroma import Chroma
+# from langchain_core.documents import Document
+# from typing import List, Tuple
+# from app.config import settings
+# from app.rag.embeddings import get_embeddings
+
+# # Disable ChromaDB telemetry to prevent errors
+# os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
+
+# def get_collection_name(project_id: int) -> str:
+#     """Each project gets its own isolated ChromaDB collection."""
+#     return f"collection_project_{project_id}"
+
+
+# def get_chroma_client() -> chromadb.PersistentClient:
+#     # Disable telemetry in client settings
+#     return chromadb.PersistentClient(
+#         path=settings.CHROMA_PERSIST_DIR,
+#         settings=chromadb.Settings(anonymized_telemetry=False)
+#     )
+
+
+# def get_vector_store(project_id: int) -> Chroma:
+#     """Get or create a Chroma vector store for a specific project."""
+#     collection_name = get_collection_name(project_id)
+#     embeddings = get_embeddings()
+    
+#     # Create client with telemetry disabled
+#     client = get_chroma_client()
+    
+#     return Chroma(
+#         collection_name=collection_name,
+#         embedding_function=embeddings,
+#         persist_directory=settings.CHROMA_PERSIST_DIR,
+#         client=client,
+#     )
+
+
+# # def add_documents_to_store(project_id: int, documents: List[Document]) -> int:
+# #     """Add documents to the project's isolated vector store. Returns chunk count."""
+# #     vector_store = get_vector_store(project_id)
+# #     vector_store.add_documents(documents)
+# #     return len(documents)
+
+# def add_documents_to_store(
+#     project_id: int,
+#     documents: List[Document]
+# ) -> int:
+#     """
+#     Add documents to the project's isolated vector store.
+#     Returns chunk count.
+#     """
+
+#     vector_store = get_vector_store(project_id)
+
+#     # IMPORTANT:
+#     # Chroma requires string IDs
+#     ids = [
+#         f"{project_id}_{i}"
+#         for i in range(len(documents))
+#     ]
+
+#     vector_store.add_documents(
+#         documents=documents,
+#         ids=ids
+#     )
+
+#     return len(documents)
+
+
+
+
+
+# def similarity_search(
+#     project_id: int,
+#     query: str,
+#     k: int = 5,
+# ) -> List[Tuple[Document, float]]:
+#     """
+#     Search ONLY within the specified project's collection.
+#     This enforces project isolation at the vector store level.
+#     """
+#     vector_store = get_vector_store(project_id)
+#     results = vector_store.similarity_search_with_relevance_scores(query, k=k)
+#     return results
+
+
+# def delete_project_collection(project_id: int) -> None:
+#     """Delete all vectors for a project when the project is deleted."""
+#     try:
+#         client = get_chroma_client()
+#         collection_name = get_collection_name(project_id)
+#         client.delete_collection(collection_name)
+#     except Exception:
+#         pass  # Collection may not exist yet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import os
+from typing import List, Tuple
+
 import chromadb
 from langchain_chroma import Chroma
-from langchain.schema import Document
-from typing import List, Tuple
+from langchain_core.documents import Document
+
 from app.config import settings
 from app.rag.embeddings import get_embeddings
 
 
+# =========================================================
+# DISABLE CHROMADB TELEMETRY
+# =========================================================
+
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_TELEMETRY"] = "False"
+
+
+# =========================================================
+# COLLECTION NAME
+# =========================================================
+
 def get_collection_name(project_id: int) -> str:
-    """Each project gets its own isolated ChromaDB collection."""
+    """
+    Each project gets its own isolated ChromaDB collection.
+    """
+
     return f"collection_project_{project_id}"
 
 
-def get_chroma_client() -> chromadb.PersistentClient:
-    return chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
+# =========================================================
+# CHROMA CLIENT
+# =========================================================
 
+def get_chroma_client() -> chromadb.PersistentClient:
+    """
+    Create ChromaDB persistent client
+    with telemetry disabled.
+    """
+
+    return chromadb.PersistentClient(
+        path=settings.CHROMA_PERSIST_DIR,
+        settings=chromadb.Settings(
+            anonymized_telemetry=False
+        )
+    )
+
+
+# =========================================================
+# VECTOR STORE
+# =========================================================
 
 def get_vector_store(project_id: int) -> Chroma:
-    """Get or create a Chroma vector store for a specific project."""
+    """
+    Get or create a Chroma vector store
+    for a specific project.
+    """
+
     collection_name = get_collection_name(project_id)
+
     embeddings = get_embeddings()
+
+    client = get_chroma_client()
+
     return Chroma(
         collection_name=collection_name,
         embedding_function=embeddings,
         persist_directory=settings.CHROMA_PERSIST_DIR,
+        client=client,
     )
 
 
-def add_documents_to_store(project_id: int, documents: List[Document]) -> int:
-    """Add documents to the project's isolated vector store. Returns chunk count."""
+# =========================================================
+# ADD DOCUMENTS
+# =========================================================
+
+def add_documents_to_store(
+    project_id: int,
+    documents: List[Document]
+) -> int:
+    """
+    Add documents to the project's isolated vector store.
+    Returns chunk count.
+    """
+
     vector_store = get_vector_store(project_id)
-    vector_store.add_documents(documents)
+
+    # IMPORTANT:
+    # Chroma requires STRING IDs
+    ids = [
+        f"{project_id}_{i}"
+        for i in range(len(documents))
+    ]
+
+    vector_store.add_documents(
+        documents=documents,
+        ids=ids
+    )
+
     return len(documents)
 
+
+# =========================================================
+# SIMILARITY SEARCH
+# =========================================================
 
 def similarity_search(
     project_id: int,
@@ -40,18 +226,46 @@ def similarity_search(
 ) -> List[Tuple[Document, float]]:
     """
     Search ONLY within the specified project's collection.
-    This enforces project isolation at the vector store level.
+    This enforces project isolation.
     """
+
     vector_store = get_vector_store(project_id)
-    results = vector_store.similarity_search_with_relevance_scores(query, k=k)
+
+    results = (
+        vector_store.similarity_search_with_relevance_scores(
+            query=query,
+            k=k
+        )
+    )
+
     return results
 
 
-def delete_project_collection(project_id: int) -> None:
-    """Delete all vectors for a project when the project is deleted."""
+# =========================================================
+# DELETE PROJECT COLLECTION
+# =========================================================
+
+def delete_project_collection(
+    project_id: int
+) -> None:
+    """
+    Delete all vectors for a project.
+    """
+
     try:
+
         client = get_chroma_client()
-        collection_name = get_collection_name(project_id)
-        client.delete_collection(collection_name)
-    except Exception:
-        pass  # Collection may not exist yet
+
+        collection_name = get_collection_name(
+            project_id
+        )
+
+        client.delete_collection(
+            name=collection_name
+        )
+
+    except Exception as e:
+
+        print(
+            f"Collection delete warning: {e}"
+        )

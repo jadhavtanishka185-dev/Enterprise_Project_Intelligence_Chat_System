@@ -26,7 +26,7 @@ export default function RegisterPage() {
     }
     setLoading(true)
     try {
-      const data = await authService.register(form.name, form.email, form.password)
+      const data = await authService.userRegister(form.name, form.email, form.password)
       login(data.access_token, data.user)
       toast.success('Account created successfully!')
       navigate('/dashboard')

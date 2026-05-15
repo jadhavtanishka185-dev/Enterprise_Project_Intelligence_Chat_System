@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
-from typing import Literal
+from pydantic import model_validator
+from typing import Literal, Any
 
 
 class Settings(BaseSettings):
@@ -25,6 +26,8 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        # Allow extra fields from .env so unknown vars don't cause errors
+        extra = "ignore"
 
 
 settings = Settings()

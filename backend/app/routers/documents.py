@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.project import Project
 from app.schemas.document import DocumentResponse
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, get_admin_user
 from app.services.document_service import (
     save_upload_file,
     process_and_index_document,
@@ -17,9 +17,21 @@ router = APIRouter(tags=["Documents"])
 
 
 async def verify_project_access(project_id: int, current_user: User, db: AsyncSession) -> Project:
-    result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.created_by == current_user.id)
-    )
+    """
+    Verify user has access to the project
+    Admin can access any project, users can only access their own
+    """
+    if current_user.role.value == "admin":
+        # Admin can access any project
+        result = await db.execute(
+            select(Project).where(Project.id == project_id)
+        )
+    else:
+        # Regular users can only access their own projects
+        result = await db.execute(
+            select(Project).where(Project.id == project_id, Project.created_by == current_user.id)
+        )
+    
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -30,10 +42,19 @@ async def verify_project_access(project_id: int, current_user: User, db: AsyncSe
 async def upload_document(
     project_id: int,
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_admin_user),  # Only admin can upload
     db: AsyncSession = Depends(get_db),
 ):
-    await verify_project_access(project_id, current_user, db)
+    """
+    Upload and index a document to a project - ADMIN ONLY
+    """
+    # Verify project exists (admin can upload to any project)
+    result = await db.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
@@ -66,6 +87,9 @@ async def list_documents(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    List all documents in a project - accessible by both admin and users
+    """
     await verify_project_access(project_id, current_user, db)
     docs = await get_project_documents(project_id, db)
     return docs

@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
-from langchain.schema import Document
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
 from app.rag.vector_store import similarity_search
 from app.rag.embeddings import get_llm
 
